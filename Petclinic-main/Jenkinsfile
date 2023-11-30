@@ -1,3 +1,4 @@
+// Jenkins pipeline for devsecops using maven builds for containerized and non-containerized applications.
 pipeline {
     agent {
         label 'linux'
