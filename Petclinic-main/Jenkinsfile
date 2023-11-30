@@ -53,7 +53,7 @@ pipeline {
 
         stage('OWASP Scan') { // Owasp Dependency Check
             steps {
-                dependencyCheck additionalArguments: '--scan ./Petclinic-main/target/', odcInstallation: 'owasp'
+                dependencyCheck additionalArguments: '--scan ./Petclinic-main/', odcInstallation: 'owasp'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
         } // End of OWASP Scan stage   
