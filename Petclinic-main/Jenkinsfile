@@ -43,12 +43,6 @@ pipeline {
             }
         } // End of the SonarQube Analysis stage
 
-        stage('OWASP Scan') { // Owasp Dependency Check
-            steps {
-                dependencyCheck additionalArguments: '--scan ./Petclinic-main', odcInstallation: 'owasp'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-            }
-        } // End of OWASP Scan stage   
         
         stage('Maven Build & Verification') { // For the Non Container Applications 
             steps {
@@ -56,6 +50,13 @@ pipeline {
                 sh "cd Petclinic-main && mvn verify"
             }
         } // End of the Maven Build & Verification stage
+
+        stage('OWASP Scan') { // Owasp Dependency Check
+            steps {
+                dependencyCheck additionalArguments: '--scan ./Petclinic-main/target/', odcInstallation: 'owasp'
+                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
+            }
+        } // End of OWASP Scan stage   
         
         stage('Docker Build') {
             steps {
