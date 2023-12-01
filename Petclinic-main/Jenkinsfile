@@ -11,7 +11,7 @@ pipeline {
     }
 
     parameters {
-      password defaultValue: 'password', description: 'Enter the password to run the script ', name: 'Password'
+      password description: 'Enter the password to run the script ', name: 'Password'
     }
 
 
