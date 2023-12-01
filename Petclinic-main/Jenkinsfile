@@ -5,15 +5,14 @@ pipeline {
     } // End of agent
 
 
-// this is the environment section // NEED TO LEARN   
+// This is the environment variable section 
     environment{
         SCANNER_HOME= tool 'sonar-scanner'   // defining the home path of the tool 
     }
 
-    parameters {
-      password description: 'Enter the password to run the script ', name: 'Password'
+    parameters { // This is a parameter section 
+      string description: 'This is a test string for testing the parameter', name: 'teststring ', trim: true
     }
-
 
     stages {
         stage('Git Checkout') {
