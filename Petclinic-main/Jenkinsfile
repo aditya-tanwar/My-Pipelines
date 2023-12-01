@@ -10,6 +10,11 @@ pipeline {
         SCANNER_HOME= tool 'sonar-scanner'   // defining the home path of the tool 
     }
 
+    parameters {
+      password defaultValue: 'password', description: 'Enter the password to run the script ', name: 'Password'
+    }
+
+
     stages {
         stage('Git Checkout') {
             steps {
