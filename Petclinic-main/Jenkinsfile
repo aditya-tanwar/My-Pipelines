@@ -3,91 +3,161 @@ pipeline {
     agent {
         label 'linux'
     } // End of agent
+    
 
-
-// This is the environment variable section 
-    environment{
-        SCANNER_HOME= tool 'sonar-scanner'   // defining the home path of the tool 
+    // ENVIRONMENT VARIABLES
+    environment {
+        NEXUS_VERSION = "nexus3"
+        NEXUS_PROTOCOL = "http"
+        NEXUS_URL = "192.168.0.105:8081"
+        NEXUS_REPOSITORY = "test"
+        NEXUS_CREDENTIAL_ID = "nexus"
     }
 
-    parameters { // This is a parameter section 
-      string description: 'This is a test string for testing the parameter', name: 'teststring ', trim: true
+    // Adding the parameters
+    parameters {
+      choice choices: ['VM-Based', 'Containerized'], description: 'Please select the type of Application Deployment', name: 'DeploymentType'
     }
+
+
 
     stages {
-        stage('Git Checkout') {
+
+        stage("Trivy Scan - Git Repository "){
+            steps{
+                sh "trivy repository --scanners vuln,secret,misconfig https://github.com/aditya-tanwar/my_pipelines.git --branch main --output trivy_repo_scan.json"
+            }
+        }   
+
+        stage('Git Checkout') { // This step will clone the repo 
             steps {
-                git branch: 'main', changelog: false, credentialsId: 'github creds', poll: false, url: 'https://github.com/aditya-tanwar/my_pipelines.git'
+                git branch: 'main', changelog: false, credentialsId: 'github_creds', poll: false, url: 'https://github.com/aditya-tanwar/my_pipelines.git'
             }
         } // End of Git Checkout stage
+     
+
+        // stage('Maven Validation & Compilation') {
+            //steps {
+            //    sh "cd Petclinic-main && mvn validate" //-------- validate the project is correct and all necessary information is available 
+            //    sh "cd Petclinic-main && mvn clean compile -DskipTests=true" //------ compiles the source code of the project ,  -DskipTests=true compiles the tests but doesn't runs them
+            //}
+        // } // End of Maven Compilation stage
         
-        stage('Maven Validation & Compilation') {
+        stage('Maven Unit Testing') { // This is a good practice , helps in early issue detection
             steps {
-                sh "cd Petclinic-main && mvn validate" // validate the project is correct and all necessary information is available 
-                sh "cd Petclinic-main && mvn clean compile -DskipTests=true" // compiles the source code of the project ,  -DskipTests=true compiles the tests but doesn't runs them
-            }
-        } // End of Maven Compilation stage
-        
-        stage('Maven Unit testing') {
-            steps {
-                sh "cd Petclinic-main && mvn test" // testing the compiled code 
+                sh "cd Petclinic-main && mvn clean test" // testing the compiled code 
             }
         } // End of Maven Unit Testing stage
-        
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('sonar-server') { // This block is used when the sonarqube is configured inside of the managejenkins>system settings.
-                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic \
-                    -Dsonar.java.binaries=. \
-                    -Dsonar.sources=./Petclinic-main \
-                    -Dsonar.projectKey=Petclinic '''
-    
-                } // End of withSonarQubeEnv block
-            
-            }
-        } // End of the SonarQube Analysis stage
 
-        
-        stage('Maven Build & Verification') { // For the Non Container Applications 
+
+        stage('Maven Build & Verification') { 
             steps {
-                sh "cd Petclinic-main && mvn clean package -DskipTests=true" // build the maven project and create JAR & WAR file.
-                sh "cd Petclinic-main && mvn verify"
+                //sh "cd Petclinic-main && mvn clean package -DskipTests=true" // build the maven project and create JAR & WAR file.
+                sh "cd Petclinic-main && mvn clean verify" // This is considered a good practice ( validate > complile > test > package > verify )
             }
         } // End of the Maven Build & Verification stage
 
-        stage('OWASP Scan') { // Owasp Dependency Check
+
+        // THE BELOW STAGE HAS TO BE AFTER THE BUILD ( OWASP SCAN)
+
+        stage('OWASP Dependency Scan') { // ( OWASP Dependency-Check is a utility that identifies project dependencies and checks if there are any known, publicly disclosed, vulnerabilities.)
             steps {
                 dependencyCheck additionalArguments: '--scan ./Petclinic-main/', odcInstallation: 'owasp'
                 dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
             }
-        } // End of OWASP Scan stage   
-        
-        stage('Docker Build') {
+        } // End of OWASP Scan stage  
+       
+
+        // SONARQUBE ANALYSIS
+        // stage('SonarQube Analysis') {
+        //     steps {
+        //         withSonarQubeEnv('sonar-server') { // This block is used when the sonarqube is configured inside of the managejenkins>system settings.
+        //             sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Petclinic \
+        //             -Dsonar.java.binaries=. \
+        //             -Dsonar.sources=./Petclinic-main \
+        //             -Dsonar.projectKey=Petclinic '''
+    
+        //         } // End of withSonarQubeEnv block
+            
+        //     }
+        // } // End of the SonarQube Analysis stage
+
+
+        stage("Publish to Nexus Repository Manager") {
             steps {
                 script {
-                    withDockerRegistry(credentialsId: 'github creds', toolName: 'Docker') {
+                    sh "pwd && ls"
+                    dir('Petclinic-main')
+                    {
+                      pom = readMavenPom file: "pom.xml";
+                      filesByGlob = findFiles(glob: "target/*.${pom.packaging}");
+                      echo "${filesByGlob[0].name} ${filesByGlob[0].path} ${filesByGlob[0].directory} ${filesByGlob[0].length} ${filesByGlob[0].lastModified}"
+                      artifactPath = "${filesByGlob[0].path}";
+                      echo "${artifactPath}"
+                      sh "ls && pwd"
+                      artifactExists = fileExists artifactPath;
+                      if(artifactExists) {
+                        echo "*** File: ${artifactPath}, group: ${pom.groupId}, packaging: ${pom.packaging}, version ${pom.version}";
+                        nexusArtifactUploader(
+                            nexusVersion: NEXUS_VERSION,
+                            protocol: NEXUS_PROTOCOL,
+                            nexusUrl: NEXUS_URL,
+                            groupId: pom.groupId,
+                            version: pom.version,
+                            repository: NEXUS_REPOSITORY,
+                            credentialsId: NEXUS_CREDENTIAL_ID,
+                            artifacts: [
+                                [artifactId: pom.artifactId,
+                                classifier: '',
+                                file: artifactPath,
+                                type: pom.packaging]
+                            ]
+                        );
+                    } else {
+                        error "*** File: ${artifactPath}, could not be found";
+                    }
+                    
+                    
+                    }
+
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            when {
+                expression { params.DeploymentType == 'Containerized'}
+            }
+            steps {
+                script {
+                    withDockerRegistry(credentialsId: 'github_creds') {
+                        sh "docker image prune -af" // remove all the unused and dangling images 
                         sh "docker build -t petclinic:latest -f Petclinic-main/Dockerfile ."
                     } // End of withDockerRegistry block       
                 }
             }
         } // End of Docker Build stage
 
+        stage("Trivy -  Vulnerability Scan - Container Image  "){
+            steps{
+                sh "trivy image petclinic --output image_vulnerability_scan.json"
+
+            }
+        } // End of Image Vulnerability Scan stage
+
         stage('Docker Tag & Push') {
+            when {
+                expression { params.DeploymentType == 'Containerized'}
+            }
             steps {
                 script {
-                    withDockerRegistry(credentialsId: 'github creds', toolName: 'Docker') {
+                    withDockerRegistry(credentialsId: 'github_creds') {
                         sh "docker tag petclinic:latest adityatanwar03/petclinic:latest"
-                        sh "docker push adityatanwar03/petclinic:latest" // Pushing the image to dockerhub 
+                        sh "docker push adityatanwar03/petclinic:latest" // Pushing the image to dockerhub ( By Default )
                     } // End of withDockerRegistry block       
                 }
             }
         } // End of Docker Tag & Push 
-
-        stage("Trivy Scan"){
-            steps{
-                sh " trivy image -f json -o Petclinic-main/trivy-results.json adijaiswal/pet-clinic123:latest"
-            }
-        } // End of Trivy Scan stage
                 
     } // End of Stages
 }
