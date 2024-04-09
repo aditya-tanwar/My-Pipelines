@@ -140,7 +140,7 @@ pipeline {
 
         stage("Trivy -  Vulnerability Scan - Container Image  "){
             when { 
-								expression { params.DeploymentType == 'Containerized'}
+			          expression { params.DeploymentType == 'Containerized'}
             }
             steps{
                 sh "trivy image petclinic --output image_vulnerability_scan.json"
