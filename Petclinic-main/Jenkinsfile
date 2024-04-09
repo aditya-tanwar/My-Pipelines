@@ -139,6 +139,9 @@ pipeline {
         } // End of Docker Build stage
 
         stage("Trivy -  Vulnerability Scan - Container Image  "){
+            when { 
+								expression { params.DeploymentType == 'Containerized'}
+            }
             steps{
                 sh "trivy image petclinic --output image_vulnerability_scan.json"
 
