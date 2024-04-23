@@ -1,8 +1,12 @@
 // Jenkins pipeline for devsecops using maven builds for containerized and non-containerized applications.
 pipeline {
+
+    // The machine/node/target where the pipeline steps will execute.
     agent {
         label 'linux'
     } // End of agent
+
+    // This option is to disable the default checkout that happens when the jenkins file is stored on scm.
     options {
     	skipDefaultCheckout true
   	}
@@ -28,9 +32,9 @@ pipeline {
 
         stage("Cleaning the Workspace before starting further steps"){
             steps{
-                cleanWs()
+                cleanWs() // This is a jenkins inbuild function that is used to clean the workspace.
             }
-        }   
+        } // End of the Cleaning Workspace stage
 
         stage("Trivy Scan - Git Repository "){
             steps{
