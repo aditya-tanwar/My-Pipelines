@@ -3,6 +3,9 @@ pipeline {
     agent {
         label 'linux'
     } // End of agent
+    options {
+    	skipDefaultCheckout true
+  	}
     
 
     // ENVIRONMENT VARIABLES
