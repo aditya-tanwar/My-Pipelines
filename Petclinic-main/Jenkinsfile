@@ -26,11 +26,11 @@ pipeline {
 
     stages {
 
-        stage("Cleaning the Workspace before starting further steps"){
+        /*stage("Cleaning the Workspace before starting further steps"){
             steps{
                 cleanWs()
             }
-        }   
+        }*/   
 
         /*stage("Trivy Scan - Git Repository "){
             steps{
