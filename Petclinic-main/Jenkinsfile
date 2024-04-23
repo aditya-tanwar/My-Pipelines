@@ -21,13 +21,7 @@ pipeline {
 
 
 
-    stages {
-
-        stage("Trivy Scan - Git Repository "){
-            steps{
-                sh "trivy repository --scanners vuln,secret,misconfig https://github.com/aditya-tanwar/my_pipelines.git --branch main --output trivy_repo_scan.json"
-            }
-        }   
+    stages {   
 
         stage('Git Checkout') { // This step will clone the repo 
             steps {
@@ -35,6 +29,12 @@ pipeline {
             }
         } // End of Git Checkout stage
      
+        stage("Trivy Scan - Git Repository "){
+            steps{
+                sh "trivy repository --scanners vuln,secret,misconfig https://github.com/aditya-tanwar/my_pipelines.git --branch main --output trivy_repo_scan.json"
+            }
+        }
+
 
         // stage('Maven Validation & Compilation') {
             //steps {
