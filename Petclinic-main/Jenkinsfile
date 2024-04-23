@@ -164,11 +164,12 @@ pipeline {
             }
         } // End of Docker Tag & Push 
 
-        post { 
-            always { 
-                cleanWs()
-            }
-        }
                 
     } // End of Stages
+
+    post { 
+        always { 
+            cleanWs()
+        }
+    }
 }
