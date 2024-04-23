@@ -24,21 +24,26 @@ pipeline {
 
 
 
-    stages {   
+    stages {
 
-        /* 
-        # This stage is only used when using jekinsfile directly from jenkins instead of scm.
-        stage('Git Checkout') { // This step will clone the repo 
-            steps {
-                git branch: 'main', changelog: false, credentialsId: 'github_creds', poll: false, url: 'https://github.com/aditya-tanwar/my_pipelines.git'
+        stage("Cleaning the Workspace before starting further steps"){
+            steps{
+                cleanWs()
             }
-        } // End of Git Checkout stage
-        */
+        }   
+
         stage("Trivy Scan - Git Repository "){
             steps{
                 sh "trivy repository --scanners vuln,secret,misconfig https://github.com/aditya-tanwar/my_pipelines.git --branch main --output trivy_repo_scan.json"
             }
         }
+
+        // This stage is only used when using jekinsfile directly from jenkins instead of scm.
+        stage('Git Checkout') { // This step will clone the repo 
+            steps {
+                git branch: 'main', changelog: false, credentialsId: 'github_creds', poll: false, url: 'https://github.com/aditya-tanwar/my_pipelines.git'
+            }
+        } // End of Git Checkout stage
 
 
         // stage('Maven Validation & Compilation') {
@@ -170,9 +175,12 @@ pipeline {
                 
     } // End of Stages
 
+    /*
+    // This is the step that can be added as a post activity after stages are completed/failed
     post { 
         always { 
-            cleanWs()
+            
         }
     }
+    */
 }
